@@ -1,7 +1,10 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { hightlightsSlides } from '../constants'
+import { ScrollTrigger } from 'gsap/all'
+gsap.registerPlugin(ScrollTrigger)
 import gsap from 'gsap'
-import { pauseImg, playImg } from '../utils'
+import { pauseImg, playImg, replayImg } from '../utils'
+import { useGSAP } from '@gsap/react'
 
 const VideoCarousel = () => {
     const videoRef = useRef([])
@@ -11,13 +14,29 @@ const VideoCarousel = () => {
     const [video, setVideo] = useState({
         isEnd: false,
         startPlay: false,
-        videoID: 0,
+        videoId: 0,
         isLastVideo: false,
         isPlaying: false
     })
 
-    const [loadedData, setLoadedData] = useState({})
+    const [loadedData, setLoadedData] = useState([])
     const {isEnd, isLastVideo, startPlay, videoId, isPlaying} = video;
+
+    useGSAP(() => {
+        gsap.to('#video', {
+            scrollTrigger: {
+                trigger: '#video',
+                toggleActions: 'restart none none none'
+            },
+            onComplete: () => {
+                setVideo((pre) => ({
+                    ...pre,
+                    startPlay: true,
+                    isPlaying: true,
+                }))
+            }
+        })
+    }, [isEnd, videoId])
 
     useEffect(() => {
         if(loadedData.length > 3){
@@ -29,6 +48,7 @@ const VideoCarousel = () => {
         }
     }, [startPlay, videoId, isPlaying, loadedData])
     
+    const handleLoadedMetadata = (i, e) => setLoadedData((pre) => [...pre, e])
 
     useEffect(() => {
       const currentProgress = 0;
@@ -52,9 +72,17 @@ const VideoCarousel = () => {
             case 'video-end':
                 setVideo((prevVideo) => ({...prevVideo, isEnd: true, videoId: i + 1}))
                 break;
-        
-            default:
+            case 'video-last':
+                setVideo((pre) => ({...pre, isLastVideo:true}))
                 break;
+            case 'video-reset':
+                setVideo((pre) => ({...pre, isLastVideo: false, videoId: 0}))
+                break;
+                case 'play':
+                setVideo((pre) => ({...pre, isPlaying: !pre.isPlaying}))
+                break;
+            default:
+                break
         }
     }
   return (
@@ -75,7 +103,7 @@ const VideoCarousel = () => {
                                 ...prevVideo, isPlaying:true
                             }))
                         }}
-                        
+                        onLoadedMetadata={(e) => handleLoadedMetadata(i, e)}
                         >
                             <source src={list.video} type='video/mp4'/>
                         </video>
